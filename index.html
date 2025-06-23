@@ -1,43 +1,4 @@
-<script type="text/javascript">
-        var gk_isXlsx = false;
-        var gk_xlsxFileLookup = {};
-        var gk_fileData = {};
-        function filledCell(cell) {
-          return cell !== '' && cell != null;
-        }
-        function loadFileData(filename) {
-        if (gk_isXlsx && gk_xlsxFileLookup[filename]) {
-            try {
-                var workbook = XLSX.read(gk_fileData[filename], { type: 'base64' });
-                var firstSheetName = workbook.SheetNames[0];
-                var worksheet = workbook.Sheets[firstSheetName];
-
-                // Convert sheet to JSON to filter blank rows
-                var jsonData = XLSX.utils.sheet_to_json(worksheet, { header: 1, blankrows: false, defval: '' });
-                // Filter out blank rows (rows where all cells are empty, null, or undefined)
-                var filteredData = jsonData.filter(row => row.some(filledCell));
-
-                // Heuristic to find the header row by ignoring rows with fewer filled cells than the next row
-                var headerRowIndex = filteredData.findIndex((row, index) =>
-                  row.filter(filledCell).length >= filteredData[index + 1]?.filter(filledCell).length
-                );
-                // Fallback
-                if (headerRowIndex === -1 || headerRowIndex > 25) {
-                  headerRowIndex = 0;
-                }
-
-                // Convert filtered JSON back to CSV
-                var csv = XLSX.utils.aoa_to_sheet(filteredData.slice(headerRowIndex)); // Create a new sheet from filtered array of arrays
-                csv = XLSX.utils.sheet_to_csv(csv, { header: 1 });
-                return csv;
-            } catch (e) {
-                console.error(e);
-                return "";
-            }
-        }
-        return gk_fileData[filename] || "";
-        }
-        </script><!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -45,16 +6,17 @@
     <title>Know Your Potential Salary</title>
     <style>
         body {
-            font-family: Arial, sans-serif;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             display: flex;
             justify-content: center;
-            align-items: center;
-            height: 100vh;
-            margin: 0;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 20px 0;
             background: linear-gradient(135deg, #e0f7fa, #f0e6f5);
         }
         .calculator-container {
-            width: 400px;
+            width: 90%;
+            max-width: 800px;
             padding: 20px;
             background: linear-gradient(135deg, #ffffff, #f9f9f9);
             border-radius: 15px;
@@ -63,25 +25,51 @@
         }
         .calculator-container h1 {
             text-align: center;
-            color: #1e90ff; /* Blue color for title */
+            color: #1e90ff;
             margin-bottom: 20px;
-            font-size: 24px;
+            font-size: 28px;
+        }
+        .month-panels {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .month-panel {
+            flex: 1;
+            padding: 15px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        .month-panel:hover {
+            transform: scale(1.02);
+        }
+        .month-panel h2 {
+            color: #2c3e50;
+            font-size: 20px;
+            margin-bottom: 10px;
+            background: linear-gradient(90deg, #ffeb3b, #ff9800);
+            -webkit-background-clip: text;
+            color: transparent;
         }
         .input-group {
-            margin: 15px 0;
+            margin: 10px 0;
         }
         .input-group label {
             display: block;
             margin-bottom: 5px;
             font-weight: bold;
-            color: #2c3e50;
+            color: #34495e;
+            font-size: 14px;
         }
         .input-group input[type="text"] {
             width: 100%;
-            padding: 10px;
-            font-size: 16px;
+            padding: 8px;
+            font-size: 14px;
             border: 2px solid #ddd;
-            border-radius: 8px;
+            border-radius: 5px;
             box-sizing: border-box;
             background-color: #f8f8f8;
             transition: border-color 0.3s;
@@ -92,9 +80,9 @@
         }
         .result {
             margin-top: 10px;
-            font-weight: bold;
             padding: 8px;
             border-radius: 5px;
+            font-weight: bold;
         }
         .result.green {
             color: #27ae60;
@@ -104,46 +92,93 @@
             color: #e74c3c;
             background-color: #fdecea;
         }
-        .radio-group {
-            margin: 10px 0;
-        }
-        .radio-group label {
-            margin-right: 20px;
-            color: #34495e;
-        }
-        .radio-group input[type="radio"] {
-            margin-right: 5px;
+        .surge-bonus {
+            margin-top: 20px;
+            text-align: center;
+            padding: 10px;
+            background: #e8f5e9;
+            border-radius: 5px;
+            display: none;
         }
         .disclaimer {
             font-size: 10px;
             text-align: center;
             color: #7f8c8d;
-            margin-top: 10px;
+            margin-top: 20px;
         }
     </style>
 </head>
 <body>
     <div class="calculator-container">
         <h1>Know Your Potential Salary</h1>
-        <div class="input-group">
-            <label for="monthlySalary">Monthly Salary Offered (₹):</label>
-            <input type="text" id="monthlySalary" oninput="formatSalary(this)" placeholder="Enter amount">
-        </div>
-        <div class="input-group">
-            <label>Monthly Spark Variable:</label>
-            <input type="text" id="target" oninput="formatSalary(this)" placeholder="Target">
-            <input type="text" id="achievement" oninput="formatSalary(this); calculateSpark()" placeholder="Achievement">
-            <div class="result" id="sparkResult"></div>
-        </div>
-        <div class="input-group">
-            <p style="color: #34495e;">If you achieve 150% of your target for 3 months consecutively, you qualify for SURGE Bonus.</p>
-            <div class="radio-group">
-                <label><input type="radio" name="surge" value="yes" onclick="calculateGross()"> Yes</label>
-                <label><input type="radio" name="surge" value="no" onclick="calculateGross()"> No</label>
+        <div class="month-panels">
+            <div class="month-panel">
+                <h2>M1</h2>
+                <div class="input-group">
+                    <label for="m1Salary">Monthly Salary Offered (₹):</label>
+                    <input type="text" id="m1Salary" oninput="formatSalary(this)" placeholder="Enter amount">
+                </div>
+                <div class="input-group">
+                    <label for="m1Target">Target (₹):</label>
+                    <input type="text" id="m1Target" oninput="formatSalary(this)" placeholder="Enter target">
+                </div>
+                <div class="input-group">
+                    <label for="m1Achievement">Achievement (₹):</label>
+                    <input type="text" id="m1Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
+                </div>
+                <div class="result" id="m1SparkResult"></div>
             </div>
-            <div class="result" id="surgeResult"></div>
+            <div class="month-panel">
+                <h2>M2</h2>
+                <div class="input-group">
+                    <label for="m2Salary">Monthly Salary Offered (₹):</label>
+                    <input type="text" id="m2Salary" oninput="formatSalary(this)" placeholder="Enter amount">
+                </div>
+                <div class="input-group">
+                    <label for="m2Target">Target (₹):</label>
+                    <input type="text" id="m2Target" oninput="formatSalary(this)" placeholder="Enter target">
+                </div>
+                <div class="input-group">
+                    <label for="m2Achievement">Achievement (₹):</label>
+                    <input type="text" id="m2Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
+                </div>
+                <div class="result" id="m2SparkResult"></div>
+            </div>
+            <div class="month-panel">
+                <h2>M3</h2>
+                <div class="input-group">
+                    <label for="m3Salary">Monthly Salary Offered (₹):</label>
+                    <input type="text" id="m3Salary" oninput="formatSalary(this)" placeholder="Enter amount">
+                </div>
+                <div class="input-group">
+                    <label for="m3Target">Target (₹):</label>
+                    <input type="text" id="m3Target" oninput="formatSalary(this)" placeholder="Enter target">
+                </div>
+                <div class="input-group">
+                    <label for="m3Achievement">Achievement (₹):</label>
+                    <input type="text" id="m3Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
+                </div>
+                <div class="result" id="m3SparkResult"></div>
+                <div class="surge-bonus" id="surgeBonus"></div>
+            </div>
+            <div class="month-panel">
+                <h2>M4</h2>
+                <div class="input-group">
+                    <label for="m4Salary">Monthly Salary Offered (₹):</label>
+                    <input type="text" id="m4Salary" oninput="formatSalary(this)" placeholder="Enter amount">
+                </div>
+                <div class="input-group">
+                    <label for="m4Target">Target (₹):</label>
+                    <input type="text" id="m4Target" oninput="formatSalary(this)" placeholder="Enter target">
+                </div>
+                <div class="input-group">
+                    <label for="m4Achievement">Achievement (₹):</label>
+                    <input type="text" id="m4Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
+                </div>
+                <div class="result" id="m4SparkResult"></div>
+                <div class="result" id="m4GrossResult" style="display: none;"></div>
+            </div>
         </div>
-        <div class="result" id="grossResult" style="display: none;"></div>
         <div class="disclaimer">* For representation purpose only, actual payout may slightly vary.</div>
     </div>
 
@@ -152,82 +187,87 @@
             let value = input.value.replace(/[^0-9]/g, '');
             let num = parseInt(value);
             input.value = num ? num.toLocaleString('en-IN') : '';
-            if (input.id === 'achievement') calculateSpark();
-            calculateGross();
+            updateAll();
         }
 
-        function calculateSpark() {
-            let monthlySalary = parseInt(document.getElementById('monthlySalary').value.replace(/,/g, '')) || 0;
-            let target = parseInt(document.getElementById('target').value.replace(/,/g, '')) || 0;
-            let achievement = parseInt(document.getElementById('achievement').value.replace(/,/g, '')) || 0;
+        function calculateSpark(salaryId, targetId, achievementId, resultId) {
+            let salary = parseInt(document.getElementById(salaryId).value.replace(/,/g, '')) || 0;
+            let target = parseInt(document.getElementById(targetId).value.replace(/,/g, '')) || 0;
+            let achievement = parseInt(document.getElementById(achievementId).value.replace(/,/g, '')) || 0;
             let sparkAmount = 0;
 
-            if (target > 0) {
-                let ratio = achievement / target * 100; // Percentage achievement
+            if (target > 0 && achievement > 0) {
+                let ratio = (achievement / target) * 100;
+
                 if (ratio < 60) {
-                    sparkAmount = 0; // Below 60% threshold
+                    sparkAmount = 0;
                 } else {
-                    let base = target * 0.6; // 60% threshold
-                    let excess = achievement - base; // Amount above 60% threshold
+                    let base = target * 0.6;
+                    let excess = achievement - base;
                     let slabs = [
-                        { max: 0.7 * target - base, rate: 0 },  // 60% to <70%
-                        { max: 0.8 * target - base, rate: 0.01 }, // 70% to <80%
-                        { max: 0.9 * target - base, rate: 0.02 }, // 80% to <90%
-                        { max: target - base, rate: 0.03 },      // 90% to <100%
-                        { max: 1.1 * target - base, rate: 0.05 }, // 100% to <110%
-                        { max: 1.2 * target - base, rate: 0.07 }, // 110% to <120%
-                        { max: 1.3 * target - base, rate: 0.10 }, // 120% to <130%
-                        { max: Infinity, rate: 0.15 }            // >=130%
+                        { max: 0.7 * target - base, rate: 0.03 },
+                        { max: 0.8 * target - base, rate: 0.04 },
+                        { max: 0.9 * target - base, rate: 0.05 },
+                        { max: target - base, rate: 0.06 },
+                        { max: 1.1 * target - base, rate: 0.12 },
+                        { max: 1.2 * target - base, rate: 0.15 },
+                        { max: 1.3 * target - base, rate: 0.20 },
+                        { max: Infinity, rate: 0.25 }
                     ];
 
+                    let slabValues = [10000, 10000, 10000, 10000, 10000, 10000, 10000, excess - (7 * 10000)];
                     let remaining = excess;
+                    let index = 0;
                     for (let slab of slabs) {
                         if (remaining > 0) {
-                            let slabAmount = Math.min(remaining, slab.max);
+                            let slabAmount = Math.min(remaining, slabValues[index] || Infinity);
                             sparkAmount += slabAmount * slab.rate;
                             remaining -= slabAmount;
+                            index++;
                         }
                     }
                 }
             }
-            document.getElementById('sparkResult').innerText = `Spark Variable Amount: ₹${sparkAmount.toLocaleString('en-IN')}`;
-            calculateGross();
+            document.getElementById(resultId).className = 'result green';
+            document.getElementById(resultId).innerText = `Spark Variable Amount: ₹${sparkAmount.toLocaleString('en-IN')}`;
+            return sparkAmount;
         }
 
-        function calculateGross() {
-            let monthlySalary = parseInt(document.getElementById('monthlySalary').value.replace(/,/g, '')) || 0;
-            let surgeResult = document.getElementById('surgeResult');
-            let grossResult = document.getElementById('grossResult');
-            let sparkAmount = parseInt(document.getElementById('sparkResult').innerText.replace(/[^0-9]/g, '')) || 0;
+        function updateAll() {
+            let m1Spark = calculateSpark('m1Salary', 'm1Target', 'm1Achievement', 'm1SparkResult');
+            let m2Spark = calculateSpark('m2Salary', 'm2Target', 'm2Achievement', 'm2SparkResult');
+            let m3Spark = calculateSpark('m3Salary', 'm3Target', 'm3Achievement', 'm3SparkResult');
+            let m4Spark = calculateSpark('m4Salary', 'm4Target', 'm4Achievement', 'm4SparkResult');
 
-            // Determine surge bonus and status
-            let surgeBonus = 0;
-            let surgeValue = document.querySelector('input[name="surge"]:checked') ? document.querySelector('input[name="surge"]:checked').value : null;
-            if (surgeValue) {
-                surgeBonus = monthlySalary > 31500 ? 4172 : 3750;
-                if (surgeValue === 'yes') {
-                    surgeResult.className = 'result green';
-                    surgeResult.innerText = `Your Monthly Surge Bonus is ₹${surgeBonus.toLocaleString('en-IN')}`;
-                } else {
-                    surgeResult.className = 'result red';
-                    surgeResult.innerText = 'You do not qualify for SURGE Bonus, Keep trying.';
-                }
+            let m1Target = parseInt(document.getElementById('m1Target').value.replace(/,/g, '')) || 0;
+            let m1Ach = parseInt(document.getElementById('m1Achievement').value.replace(/,/g, '')) || 0;
+            let m2Target = parseInt(document.getElementById('m2Target').value.replace(/,/g, '')) || 0;
+            let m2Ach = parseInt(document.getElementById('m2Achievement').value.replace(/,/g, '')) || 0;
+            let m3Target = parseInt(document.getElementById('m3Target').value.replace(/,/g, '')) || 0;
+            let m3Ach = parseInt(document.getElementById('m3Achievement').value.replace(/,/g, '')) || 0;
+            let cumulativeAchPercent = (m1Target > 0 ? (m1Ach / m1Target) * 100 : 0) + 
+                                     (m2Target > 0 ? (m2Ach / m2Target) * 100 : 0) + 
+                                     (m3Target > 0 ? (m3Ach / m3Target) * 100 : 0);
+            let m4Salary = parseInt(document.getElementById('m4Salary').value.replace(/,/g, '')) || 0;
+            let surgeBonus = (cumulativeAchPercent >= 450) ? 3750 : 0;
+            let m4GrossResult = document.getElementById('m4GrossResult');
+            let surgeBonusDiv = document.getElementById('surgeBonus');
+
+            if (surgeBonus > 0) {
+                surgeBonusDiv.className = 'surge-bonus green';
+                surgeBonusDiv.style.display = 'block';
+                surgeBonusDiv.innerText = `Congratulations! You have unlocked a monthly Surge Bonus of Rs 3,750.`;
             } else {
-                surgeResult.className = 'result';
-                surgeResult.innerText = '';
+                surgeBonusDiv.style.display = 'none';
             }
 
-            // Calculate total based on surge selection
-            let total = surgeValue === 'yes' ? monthlySalary + sparkAmount + surgeBonus : monthlySalary + sparkAmount;
-
-            // Display gross result if all required inputs are provided
-            if (monthlySalary > 0 && document.getElementById('target').value && document.getElementById('achievement').value && surgeValue) {
-                grossResult.className = 'result green';
-                grossResult.style.display = 'block';
-                grossResult.innerText = `Your Potential Gross Monthly Income is ₹${total.toLocaleString('en-IN')}`;
+            let totalM4 = m4Salary + m4Spark + surgeBonus;
+            if (m4Salary > 0 && document.getElementById('m4Target').value && document.getElementById('m4Achievement').value) {
+                m4GrossResult.className = 'result green';
+                m4GrossResult.style.display = 'block';
+                m4GrossResult.innerText = `Your Potential Gross Salary for M4 is ₹${totalM4.toLocaleString('en-IN')}`;
             } else {
-                grossResult.className = 'result';
-                grossResult.style.display = 'none';
+                m4GrossResult.style.display = 'none';
             }
         }
     </script>
