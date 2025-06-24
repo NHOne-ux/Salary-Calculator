@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Know Your Potential Salary</title>
+    <title>GWP Calculator</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -88,29 +88,11 @@
             color: #27ae60;
             background-color: #e8f5e9;
         }
-        .result.red {
-            color: #e74c3c;
-            background-color: #fdecea;
-        }
-        .surge-bonus {
-            margin-top: 20px;
-            text-align: center;
-            padding: 10px;
-            background: #e8f5e9;
-            border-radius: 5px;
-            display: none;
-        }
-        .disclaimer {
-            font-size: 10px;
-            text-align: center;
-            color: #7f8c8d;
-            margin-top: 20px;
-        }
     </style>
 </head>
 <body>
     <div class="calculator-container">
-        <h1>Know Your Potential Salary</h1>
+        <h1>GWP Calculator</h1>
         <div class="month-panels">
             <div class="month-panel">
                 <h2>M1</h2>
@@ -126,7 +108,7 @@
                     <label for="m1Achievement">Achievement (₹):</label>
                     <input type="text" id="m1Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
                 </div>
-                <div class="result" id="m1SparkResult"></div>
+                <div class="result" id="m1GWPResult"></div>
             </div>
             <div class="month-panel">
                 <h2>M2</h2>
@@ -142,7 +124,7 @@
                     <label for="m2Achievement">Achievement (₹):</label>
                     <input type="text" id="m2Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
                 </div>
-                <div class="result" id="m2SparkResult"></div>
+                <div class="result" id="m2GWPResult"></div>
             </div>
             <div class="month-panel">
                 <h2>M3</h2>
@@ -158,8 +140,7 @@
                     <label for="m3Achievement">Achievement (₹):</label>
                     <input type="text" id="m3Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
                 </div>
-                <div class="result" id="m3SparkResult"></div>
-                <div class="surge-bonus" id="surgeBonus"></div>
+                <div class="result" id="m3GWPResult"></div>
             </div>
             <div class="month-panel">
                 <h2>M4</h2>
@@ -175,8 +156,7 @@
                     <label for="m4Achievement">Achievement (₹):</label>
                     <input type="text" id="m4Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
                 </div>
-                <div class="result" id="m4SparkResult"></div>
-                <div class="result" id="m4GrossResult" style="display: none;"></div>
+                <div class="result" id="m4GWPResult"></div>
             </div>
         </div>
         <div class="disclaimer">* For representation purpose only, actual payout may slightly vary.</div>
@@ -190,85 +170,71 @@
             updateAll();
         }
 
-        function calculateSpark(salaryId, targetId, achievementId, resultId) {
-            let salary = parseInt(document.getElementById(salaryId).value.replace(/,/g, '')) || 0;
-            let target = parseInt(document.getElementById(targetId).value.replace(/,/g, '')) || 0;
-            let achievement = parseInt(document.getElementById(achievementId).value.replace(/,/g, '')) || 0;
-            let sparkAmount = 0;
+        function calculateGWP(target, achievement) {
+            let gwp = 0;
 
             if (target > 0 && achievement > 0) {
                 let ratio = (achievement / target) * 100;
 
                 if (ratio < 60) {
-                    sparkAmount = 0;
+                    gwp = 0;
                 } else {
-                    let base = target * 0.6;
-                    let excess = achievement - base;
+                    // Calculate incremental GWP slabs based on 10% of target
+                    let baseThreshold = target * 0.60; // 60% of target
+                    let increment = target * 0.10;     // 10% of target per slab
+
                     let slabs = [
-                        { max: 0.7 * target - base, rate: 0.03 },
-                        { max: 0.8 * target - base, rate: 0.04 },
-                        { max: 0.9 * target - base, rate: 0.05 },
-                        { max: target - base, rate: 0.06 },
-                        { max: 1.1 * target - base, rate: 0.12 },
-                        { max: 1.2 * target - base, rate: 0.15 },
-                        { max: 1.3 * target - base, rate: 0.20 },
-                        { max: Infinity, rate: 0.25 }
+                        { min: 60, max: 69.9, rate: 0.03 },
+                        { min: 70, max: 79.9, rate: 0.04 },
+                        { min: 80, max: 89.9, rate: 0.05 },
+                        { min: 90, max: 99.9, rate: 0.06 },
+                        { min: 100, max: 109.9, rate: 0.12 },
+                        { min: 110, max: 119.9, rate: 0.15 },
+                        { min: 120, max: 129.9, rate: 0.20 },
+                        { min: 130, max: Infinity, rate: 0.25 }
                     ];
 
-                    let slabValues = [10000, 10000, 10000, 10000, 10000, 10000, 10000, excess - (7 * 10000)];
-                    let remaining = excess;
-                    let index = 0;
+                    let currentThreshold = baseThreshold;
                     for (let slab of slabs) {
-                        if (remaining > 0) {
-                            let slabAmount = Math.min(remaining, slabValues[index] || Infinity);
-                            sparkAmount += slabAmount * slab.rate;
-                            remaining -= slabAmount;
-                            index++;
+                        if (ratio >= slab.min) {
+                            let incrementalGWP = Math.min(achievement, currentThreshold + increment) - currentThreshold;
+                            if (incrementalGWP > 0) {
+                                gwp += incrementalGWP * slab.rate;
+                            }
+                            currentThreshold += increment;
+                        } else {
+                            break;
                         }
                     }
                 }
             }
-            document.getElementById(resultId).className = 'result green';
-            document.getElementById(resultId).innerText = `Spark Variable Amount: ₹${sparkAmount.toLocaleString('en-IN')}`;
-            return sparkAmount;
+
+            return gwp;
         }
 
         function updateAll() {
-            let m1Spark = calculateSpark('m1Salary', 'm1Target', 'm1Achievement', 'm1SparkResult');
-            let m2Spark = calculateSpark('m2Salary', 'm2Target', 'm2Achievement', 'm2SparkResult');
-            let m3Spark = calculateSpark('m3Salary', 'm3Target', 'm3Achievement', 'm3SparkResult');
-            let m4Spark = calculateSpark('m4Salary', 'm4Target', 'm4Achievement', 'm4SparkResult');
-
             let m1Target = parseInt(document.getElementById('m1Target').value.replace(/,/g, '')) || 0;
             let m1Ach = parseInt(document.getElementById('m1Achievement').value.replace(/,/g, '')) || 0;
             let m2Target = parseInt(document.getElementById('m2Target').value.replace(/,/g, '')) || 0;
             let m2Ach = parseInt(document.getElementById('m2Achievement').value.replace(/,/g, '')) || 0;
             let m3Target = parseInt(document.getElementById('m3Target').value.replace(/,/g, '')) || 0;
             let m3Ach = parseInt(document.getElementById('m3Achievement').value.replace(/,/g, '')) || 0;
-            let cumulativeAchPercent = (m1Target > 0 ? (m1Ach / m1Target) * 100 : 0) + 
-                                     (m2Target > 0 ? (m2Ach / m2Target) * 100 : 0) + 
-                                     (m3Target > 0 ? (m3Ach / m3Target) * 100 : 0);
-            let m4Salary = parseInt(document.getElementById('m4Salary').value.replace(/,/g, '')) || 0;
-            let surgeBonus = (cumulativeAchPercent >= 450) ? 3750 : 0;
-            let m4GrossResult = document.getElementById('m4GrossResult');
-            let surgeBonusDiv = document.getElementById('surgeBonus');
+            let m4Target = parseInt(document.getElementById('m4Target').value.replace(/,/g, '')) || 0;
+            let m4Ach = parseInt(document.getElementById('m4Achievement').value.replace(/,/g, '')) || 0;
 
-            if (surgeBonus > 0) {
-                surgeBonusDiv.className = 'surge-bonus green';
-                surgeBonusDiv.style.display = 'block';
-                surgeBonusDiv.innerText = `Congratulations! You have unlocked a monthly Surge Bonus of Rs 3,750.`;
-            } else {
-                surgeBonusDiv.style.display = 'none';
-            }
+            let m1GWP = calculateGWP(m1Target, m1Ach);
+            let m2GWP = calculateGWP(m2Target, m2Ach);
+            let m3GWP = calculateGWP(m3Target, m3Ach);
+            let m4GWP = calculateGWP(m4Target, m4Ach);
 
-            let totalM4 = m4Salary + m4Spark + surgeBonus;
-            if (m4Salary > 0 && document.getElementById('m4Target').value && document.getElementById('m4Achievement').value) {
-                m4GrossResult.className = 'result green';
-                m4GrossResult.style.display = 'block';
-                m4GrossResult.innerText = `Your Potential Gross Salary for M4 is ₹${totalM4.toLocaleString('en-IN')}`;
-            } else {
-                m4GrossResult.style.display = 'none';
-            }
+            document.getElementById('m1GWPResult').className = 'result green';
+            document.getElementById('m1GWPResult').innerText = `Your Potential Spark variable for the month: ₹${m1GWP.toLocaleString('en-IN')}`;
+            document.getElementById('m2GWPResult').className = 'result green';
+            document.getElementById('m2GWPResult').innerText = `Your Potential Spark variable for the month: ₹${m2GWP.toLocaleString('en-IN')}`;
+            document.getElementById('m3GWPResult').className = 'result green';
+            document.getElementById('m3GWPResult').innerText = `Your Potential Spark variable for the month: ₹${m3GWP.toLocaleString('en-IN')}`;
+            document.getElementById('m4GWPResult').className = 'result green';
+            document.getElementById('m4GWPResult').innerText = `Your Potential Spark variable for the month: ₹${m4GWP.toLocaleString('en-IN')}`;
         }
     </script>
 </body>
