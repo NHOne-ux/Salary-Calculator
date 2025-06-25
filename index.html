@@ -88,6 +88,19 @@
             color: #27ae60;
             background-color: #e8f5e9;
         }
+        .surge-message {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 18px;
+            color: #27ae60;
+            white-space: nowrap;
+        }
+        .disclaimer {
+            margin-top: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #34495e;
+        }
     </style>
 </head>
 <body>
@@ -146,19 +159,21 @@
                 <h2>M4</h2>
                 <div class="input-group">
                     <label for="m4Salary">Monthly Salary Offered (₹):</label>
-                    <input type="text" id="m4Salary" oninput="formatSalary(this)" placeholder="Enter amount">
+                    <input type="text" id="m4Salary" oninput="formatSalary(this); updateAll()" placeholder="Enter amount">
                 </div>
                 <div class="input-group">
                     <label for="m4Target">Target (₹):</label>
-                    <input type="text" id="m4Target" oninput="formatSalary(this)" placeholder="Enter target">
+                    <input type="text" id="m4Target" oninput="formatSalary(this); updateAll()" placeholder="Enter target">
                 </div>
                 <div class="input-group">
                     <label for="m4Achievement">Achievement (₹):</label>
                     <input type="text" id="m4Achievement" oninput="formatSalary(this); updateAll()" placeholder="Enter achievement">
                 </div>
                 <div class="result" id="m4GWPResult"></div>
+                <div class="result green" id="m4SalaryResult"></div>
             </div>
         </div>
+        <div class="surge-message" id="surgeMessage"></div>
         <div class="disclaimer">* For representation purpose only, actual payout may slightly vary.</div>
     </div>
 
@@ -179,9 +194,8 @@
                 if (ratio < 60) {
                     gwp = 0;
                 } else {
-                    // Calculate incremental GWP slabs based on 10% of target
-                    let baseThreshold = target * 0.60; // 60% of target
-                    let increment = target * 0.10;     // 10% of target per slab
+                    let baseThreshold = target * 0.60;
+                    let increment = target * 0.10;
 
                     let slabs = [
                         { min: 60, max: 69.9, rate: 0.03 },
@@ -219,6 +233,7 @@
             let m2Ach = parseInt(document.getElementById('m2Achievement').value.replace(/,/g, '')) || 0;
             let m3Target = parseInt(document.getElementById('m3Target').value.replace(/,/g, '')) || 0;
             let m3Ach = parseInt(document.getElementById('m3Achievement').value.replace(/,/g, '')) || 0;
+            let m4Salary = parseInt(document.getElementById('m4Salary').value.replace(/,/g, '')) || 0;
             let m4Target = parseInt(document.getElementById('m4Target').value.replace(/,/g, '')) || 0;
             let m4Ach = parseInt(document.getElementById('m4Achievement').value.replace(/,/g, '')) || 0;
 
@@ -227,6 +242,14 @@
             let m3GWP = calculateGWP(m3Target, m3Ach);
             let m4GWP = calculateGWP(m4Target, m4Ach);
 
+            // Calculate achievement percentages
+            let m1Ratio = m1Target > 0 ? (m1Ach / m1Target) * 100 : 0;
+            let m2Ratio = m2Target > 0 ? (m2Ach / m2Target) * 100 : 0;
+            let m3Ratio = m3Target > 0 ? (m3Ach / m3Target) * 100 : 0;
+            let totalRatio = m1Ratio + m2Ratio + m3Ratio;
+            let surgeBonus = totalRatio >= 450 ? 3750 : 0;
+
+            // Display Potential Spark variable for each panel
             document.getElementById('m1GWPResult').className = 'result green';
             document.getElementById('m1GWPResult').innerText = `Your Potential Spark variable for the month: ₹${m1GWP.toLocaleString('en-IN')}`;
             document.getElementById('m2GWPResult').className = 'result green';
@@ -235,6 +258,19 @@
             document.getElementById('m3GWPResult').innerText = `Your Potential Spark variable for the month: ₹${m3GWP.toLocaleString('en-IN')}`;
             document.getElementById('m4GWPResult').className = 'result green';
             document.getElementById('m4GWPResult').innerText = `Your Potential Spark variable for the month: ₹${m4GWP.toLocaleString('en-IN')}`;
+
+            // Display SURGE bonus message only if criteria is met
+            let surgeMessage = document.getElementById('surgeMessage');
+            surgeMessage.innerText = totalRatio >= 450 ? "Congratulations! You have unlocked a monthly SURGE bonus of ₹3750*" : "";
+
+            // Display total salary for M4 only if all M4 inputs are filled and surge criteria is met
+            let m4SalaryResult = document.getElementById('m4SalaryResult');
+            if (m4Salary > 0 && m4Target > 0 && m4Ach > 0 && totalRatio >= 450) {
+                let totalM4Salary = m4Salary + m4GWP + surgeBonus;
+                m4SalaryResult.innerText = `Your potential monthly salary for M4 is ₹${totalM4Salary.toLocaleString('en-IN')}`;
+            } else {
+                m4SalaryResult.innerText = '';
+            }
         }
     </script>
 </body>
