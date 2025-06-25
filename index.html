@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GWP Calculator</title>
+    <title>Know Your Potential Salary</title>
     <style>
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -105,7 +105,7 @@
 </head>
 <body>
     <div class="calculator-container">
-        <h1>GWP Calculator</h1>
+        <h1>Know Your Potential Salary</h1>
         <div class="month-panels">
             <div class="month-panel">
                 <h2>M1</h2>
@@ -194,36 +194,51 @@
                 if (ratio < 60) {
                     gwp = 0;
                 } else {
-                    let baseThreshold = target * 0.60;
-                    let increment = target * 0.10;
+                    let base = target * 0.60; // 60% of target
+                    let increment = target * 0.10; // 10% increments
+                    let remainingAchievement = achievement - base; // Achievement beyond 60% base
 
                     let slabs = [
-                        { min: 60, max: 69.9, rate: 0.03 },
-                        { min: 70, max: 79.9, rate: 0.04 },
-                        { min: 80, max: 89.9, rate: 0.05 },
-                        { min: 90, max: 99.9, rate: 0.06 },
-                        { min: 100, max: 109.9, rate: 0.12 },
-                        { min: 110, max: 119.9, rate: 0.15 },
-                        { min: 120, max: 129.9, rate: 0.20 },
-                        { min: 130, max: Infinity, rate: 0.25 }
+                        { min: 60, max: 69.9, rate: 0.03 },  // 3% for 60-69.9%
+                        { min: 70, max: 79.9, rate: 0.04 },  // 4% for 70-79.9%
+                        { min: 80, max: 89.9, rate: 0.05 },  // 5% for 80-89.9%
+                        { min: 90, max: 99.9, rate: 0.06 },  // 6% for 90-99.9%
+                        { min: 100, max: 109.9, rate: 0.12 }, // 12% for 100-109.9%
+                        { min: 110, max: 119.9, rate: 0.15 }, // 15% for 110-119.9%
+                        { min: 120, max: 129.9, rate: 0.20 }, // 20% for 120-129.9%
+                        { min: 130, max: Infinity, rate: 0.25 } // 25% for 130% and above
                     ];
 
-                    let currentThreshold = baseThreshold;
+                    let currentBase = base;
                     for (let slab of slabs) {
                         if (ratio >= slab.min) {
-                            let incrementalGWP = Math.min(achievement, currentThreshold + increment) - currentThreshold;
-                            if (incrementalGWP > 0) {
-                                gwp += incrementalGWP * slab.rate;
+                            if (ratio <= slab.max) {
+                                // Within this slab, calculate proportional increment
+                                let achievedInSlab = Math.min(achievement, currentBase + increment) - currentBase;
+                                if (achievedInSlab > 0) {
+                                    gwp += achievedInSlab * slab.rate;
+                                }
+                                break; // Stop at the slab containing the achieved ratio
+                            } else {
+                                // Full increment for this slab
+                                gwp += increment * slab.rate;
+                                currentBase += increment;
                             }
-                            currentThreshold += increment;
-                        } else {
-                            break;
+                        }
+                    }
+
+                    // Handle 130%+ slab if achievement exceeds 130%, starting from 140% to remove extra 2500
+                    if (ratio >= 130) {
+                        let excessStart = target * 1.40; // Start excess from 140% of target
+                        let excessAchievement = Math.max(0, achievement - excessStart);
+                        if (excessAchievement > 0) {
+                            gwp += excessAchievement * 0.25;
                         }
                     }
                 }
             }
 
-            return gwp;
+            return Math.round(gwp); // Round to avoid decimal precision issues
         }
 
         function updateAll() {
